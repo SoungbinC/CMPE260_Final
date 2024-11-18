@@ -28,23 +28,23 @@ python lunar_lander_DQN.py
 python lunar_lander_random.py
 ```
 
--   1. random actions
-       Without any reinforcement, random actions will be taken. The agent will not learn anythin.
-       Also it is more likely that the agent will not reach the goal.
+1. random actions
+   Without any reinforcement, random actions will be taken. The agent will not learn anythin.
+   Also it is more likely that the agent will not reach the goal.
 
 ```bash
 python lunaer_lander_Q_learning.py
 ```
 
--   2. Q-learning
-       With Q-learning, the agent will learn the best action to take in each state. The agent will update the Q-table by using the formula above. The agent will learn the best action to take in each state by updating the Q-table. The Q-table is a matrix where the rows represent the states and the columns represent the actions. The agent will update the Q-table by using the following formula:
+2. Q-learning
+   With Q-learning, the agent will learn the best action to take in each state. The agent will update the Q-table by using the formula above. The agent will learn the best action to take in each state by updating the Q-table. The Q-table is a matrix where the rows represent the states and the columns represent the actions. The agent will update the Q-table by using the following formula:
 
 ```bash
 python lunar_lander_DQN.py
 ```
 
--   3. DQN
-       With DQN, the agent will learn the best action to take in each state by using a neural network. The neural network will take the state as input and output the Q-values for each action. The agent will update the neural network by using the following formula:
+3. DQN
+   With DQN, the agent will learn the best action to take in each state by using a neural network. The neural network will take the state as input and output the Q-values for each action. The agent will update the neural network by using the following formula:
 
 # Conclusion
 
