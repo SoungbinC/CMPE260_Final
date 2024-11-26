@@ -18,6 +18,12 @@ where:
 
 # How to run
 
+Before run this. you have to run rl_env for virtual environment.
+
+```bash
+source rl_env/bin/activate
+```
+
 ```bash
 python lunar_lander_DQN.py
 ```
@@ -46,6 +52,18 @@ python lunar_lander_DQN.py
 3. DQN
    With DQN, the agent will learn the best action to take in each state by using a neural network. The neural network will take the state as input and output the Q-values for each action. The agent will update the neural network by using the following formula:
 
+4. Double DQN
+   With Double DQN, the agent will learn the best action to take in each state by using two neural networks. The first neural network will take the state as input and output the Q-values for each action. The second neural network will take the state as input and output the Q-values for each action. The agent will update the first neural network by using the following formula:
+
+```bash
+Q(s,a) = Q(s,a) + alpha * (reward + gamma * Q(s',a') - Q(s,a))
+```
+
+```bash
+python
+
+where:
 # Conclusion
 
 With q-learning, it takes forever to reach the goal. With DQN, the agent can reach the goal in a few episodes. DQN is more efficient than q-learning.
+```

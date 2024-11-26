@@ -160,11 +160,11 @@ def record_successful_landing(episode):
         )
 
 
-# Main training loop
-def train_agent(num_episodes, save_model_path=None):
+def train_agent_with_metrics(num_episodes, train_fn, save_model_path=None):
     global epsilon
     episode_rewards = []
-    first_success_logged = False
+    successful_landings = 0
+    first_success_episode = None
 
     for episode in range(num_episodes):
         state, info = env.reset()
@@ -174,42 +174,60 @@ def train_agent(num_episodes, save_model_path=None):
         while not done:
             action = select_action(state, epsilon)
             next_state, reward, done, truncated, info = env.step(action)
+
+            # Reward shaping: Encourage staying near poles
+            if -0.5 <= state[0] <= 0.5:
+                reward += 5  # Bonus for being between poles
+            else:
+                reward -= 5  # Penalty for moving away
+
             replay_buffer.push(state, action, reward, next_state, done)
             state = next_state
             total_reward += reward
 
-            train()
+            train_fn()
 
             if done or truncated:
+                final_x = state[0]
+
+                # Check if the landing is successful
+                if total_reward >= 200:
+                    if -0.5 <= final_x <= 0.5:
+                        successful_landings += 1  # Increment success count
+
+                        # Record the first success episode
+                        if first_success_episode is None:
+                            first_success_episode = episode + 1
                 break
 
         episode_rewards.append(total_reward)
         epsilon = max(epsilon_min, epsilon * epsilon_decay)
 
-        # Check if this episode was a successful landing
-        if total_reward >= 200 and not first_success_logged:
-            final_x = state[0]
-            if -0.5 <= final_x <= 0.5:
-                first_success_logged = True
-                log_first_success(episode + 1)
-                record_successful_landing(episode + 1)
-
+        # Print progress every 100 episodes
         if (episode + 1) % 100 == 0:
+            avg_reward = np.mean(episode_rewards[-100:])
             print(
-                f"Episode: {episode + 1}, Reward: {total_reward}, Epsilon: {epsilon:.2f}"
+                f"Episode: {episode + 1}, Avg Reward (Last 100): {avg_reward:.2f}, "
+                f"Successful Landings: {successful_landings}, Epsilon: {epsilon:.2f}"
             )
 
-        # Update target network
+        # Update target network periodically
         if episode % target_update_frequency == 0:
             target_net.load_state_dict(policy_net.state_dict())
 
     if save_model_path:
         save_model(policy_net, save_model_path)
 
+    # Return metrics for comparison
+    avg_reward_last_100 = np.mean(episode_rewards[-100:])
+    return avg_reward_last_100, successful_landings, first_success_episode
 
-# Train the agent
-train_agent(num_episodes, save_model_path=model_save_path)
 
-# Reload and train again
-load_model(policy_net, model_save_path)
-train_agent(500, save_model_path=model_save_path)
+if __name__ == "__main__":
+
+    print("Training DQN...")
+    avg_reward_dqn, successes_dqn, first_success_dqn = train_agent_with_metrics(
+        num_episodes=1000,
+        train_fn=train,  # Pass DQN training function
+        save_model_path="dqn_model.pth",
+    )
