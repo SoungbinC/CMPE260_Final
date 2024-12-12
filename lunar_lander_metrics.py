@@ -61,9 +61,15 @@ def train_a2c(env, num_episodes=1000, gamma=0.99, lr=0.001):
 
 
 # Unified Training Function
+import os
+
+
 def train_and_evaluate(
     algorithm, env_id="LunarLander-v3", num_episodes=1000, save_model_path="models"
 ):
+    # Ensure the save directory exists
+    os.makedirs(save_model_path, exist_ok=True)
+
     # Handle discrete and continuous environments
     if algorithm in ["DQN", "DDQN"]:
         env_id = "LunarLander-v3"  # DQN and DDQN require discrete action spaces
