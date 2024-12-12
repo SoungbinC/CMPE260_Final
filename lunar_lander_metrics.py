@@ -62,13 +62,13 @@ def train_a2c(env, num_episodes=1000, gamma=0.99, lr=0.001):
 
 # Unified Training Function
 def train_and_evaluate(
-    algorithm, env_id="LunarLander-v2", num_episodes=1000, save_model_path="models"
+    algorithm, env_id="LunarLander-v3", num_episodes=1000, save_model_path="models"
 ):
     # Handle discrete and continuous environments
     if algorithm in ["DQN", "DDQN"]:
-        env_id = "LunarLander-v2"  # DQN and DDQN require discrete action spaces
+        env_id = "LunarLander-v3"  # DQN and DDQN require discrete action spaces
     else:
-        env_id = "LunarLanderContinuous-v2"
+        env_id = "LunarLanderContinuous-v3"
 
     env = gym.make(env_id)
     rewards = []
