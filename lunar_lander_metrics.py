@@ -120,12 +120,17 @@ def train_and_evaluate(
 ):
     os.makedirs(save_model_path, exist_ok=True)
 
+    # Set the environment ID based on the algorithm
     if algorithm in ["DQN", "DDQN"]:
         env_id = "LunarLander-v3"  # Discrete action space
     else:
         env_id = "LunarLanderContinuous-v3"  # Continuous action space
 
-    env = gym.make(env_id)
+    # Wrap the environment with Monitor for proper evaluation
+    from stable_baselines3.common.monitor import Monitor
+
+    env = Monitor(gym.make(env_id))
+
     rewards = []
     model = None  # Initialize model reference
 
@@ -150,7 +155,8 @@ def train_and_evaluate(
             )
             model.save(f"{save_model_path}/{algorithm}_model")
         elif algorithm == "DDQN":
-            model = DQN("MlpPolicy", env, verbose=1)  # Use standard DQN as fallback
+            # Use Custom Double DQN
+            model = CustomDoubleDQN("MlpPolicy", env, verbose=1, learning_starts=500)
             model.learn(total_timesteps=num_episodes * 500)
             rewards, _ = evaluate_policy(
                 model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
