@@ -1,7 +1,7 @@
 import gymnasium as gym
 import torch
 import json
-from stable_baselines3 import SAC
+from stable_baselines3 import SAC, DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 from torch.utils.tensorboard import SummaryWriter
 
@@ -70,6 +70,14 @@ def train_and_evaluate(
     # Ensure the save directory exists
     os.makedirs(save_model_path, exist_ok=True)
 
+    # Define model save path
+    model_file = f"{save_model_path}/{algorithm}_model"
+
+    # Skip training if the model file already exists
+    if os.path.exists(f"{model_file}.zip") or os.path.exists(f"{model_file}.pth"):
+        print(f"Model for {algorithm} already exists. Skipping training.")
+        return []
+
     # Handle discrete and continuous environments
     if algorithm in ["DQN", "DDQN"]:
         env_id = "LunarLander-v3"  # DQN and DDQN require discrete action spaces
@@ -82,21 +90,21 @@ def train_and_evaluate(
 
     if algorithm == "A2C":
         model, rewards = train_a2c(env, num_episodes=num_episodes)
-        torch.save(model.state_dict(), f"{save_model_path}/{algorithm}_model.pth")
+        torch.save(model.state_dict(), f"{model_file}.pth")
     elif algorithm == "SAC":
         model = SAC("MlpPolicy", env, verbose=1)
         model.learn(total_timesteps=num_episodes * 500)  # SAC uses timesteps
         rewards, _ = evaluate_policy(
             model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
         )
-        model.save(f"{save_model_path}/{algorithm}_model")
+        model.save(f"{model_file}.zip")
     elif algorithm == "DQN":
         model = DQN("MlpPolicy", env, verbose=1)
         model.learn(total_timesteps=num_episodes * 500)
         rewards, _ = evaluate_policy(
             model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
         )
-        model.save(f"{save_model_path}/{algorithm}_model")
+        model.save(f"{model_file}.zip")
     elif algorithm == "DDQN":
         model = DQN(
             "MlpPolicy", env, verbose=1, double_q=True
@@ -105,7 +113,7 @@ def train_and_evaluate(
         rewards, _ = evaluate_policy(
             model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
         )
-        model.save(f"{save_model_path}/{algorithm}_model")
+        model.save(f"{model_file}.zip")
 
     env.close()
     return rewards
