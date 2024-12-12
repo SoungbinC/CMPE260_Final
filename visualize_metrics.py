@@ -1,27 +1,32 @@
-import os
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-# Load metrics from JSON file
+# Load metrics from JSON
 with open("metrics.json", "r") as f:
     metrics = json.load(f)
 
 
-# Smoothing function for rewards
+# Smoothing function
 def smooth(data, window_size=50):
-    smoothed = np.convolve(data, np.ones(window_size) / window_size, mode="valid")
-    return smoothed
+    if len(data) < window_size:  # Handle small datasets
+        return data
+    return np.convolve(data, np.ones(window_size) / window_size, mode="valid")
 
 
-# Directory to save plots
+# Create directory for plots
 plot_save_dir = "plots"
 os.makedirs(plot_save_dir, exist_ok=True)
 
-# Create and save individual plots for each algorithm
+# Generate plots
 for algo, data in metrics.items():
-    rewards = data["rewards"]
-    smoothed_rewards = smooth(rewards)  # Smooth rewards for better visualization
+    rewards = data.get("rewards", [])
+    if not rewards:
+        print(f"No rewards found for {algo}. Skipping plot.")
+        continue
+
+    smoothed_rewards = smooth(rewards)
 
     plt.figure(figsize=(10, 6))
     plt.plot(smoothed_rewards, label=f"{algo} (Smoothed)", color="blue")
@@ -31,9 +36,9 @@ for algo, data in metrics.items():
     plt.legend()
     plt.grid()
 
-    # Save the plot as an image file
+    # Save plot
     plot_file_path = f"{plot_save_dir}/{algo}_learning_curve.png"
     plt.savefig(plot_file_path)
     print(f"Plot for {algo} saved to {plot_file_path}")
 
-    plt.close()  # Close the figure to save memory
+    plt.close()
