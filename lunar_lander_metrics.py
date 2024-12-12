@@ -5,6 +5,60 @@ from stable_baselines3 import SAC, DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 from torch.utils.tensorboard import SummaryWriter
 
+import torch as th
+from stable_baselines3.dqn.dqn import DQN
+from stable_baselines3.dqn.policies import DQNPolicy
+from stable_baselines3.common.utils import polyak_update
+
+
+class CustomDoubleDQN(DQN):
+    def __init__(self, policy, env, learning_starts=500, **kwargs):
+        super(CustomDoubleDQN, self).__init__(policy, env, **kwargs)
+        self.learning_starts = learning_starts
+
+    def train(self, gradient_steps, batch_size=32):
+        for gradient_step in range(gradient_steps):
+            # Sample replay buffer
+            replay_data = self.replay_buffer.sample(
+                batch_size, env=self._vec_normalize_env
+            )
+
+            # Compute the target for Double DQN
+            with th.no_grad():
+                # Select action with the policy network
+                next_actions = self.q_net(replay_data.next_observations).argmax(
+                    1, keepdim=True
+                )
+                # Evaluate the action with the target network
+                next_q_values = self.q_net_target(replay_data.next_observations).gather(
+                    1, next_actions
+                )
+
+                # Compute the target Q-value
+                target_q = (
+                    replay_data.rewards
+                    + (1 - replay_data.dones) * self.gamma * next_q_values
+                )
+
+            # Get current Q-values
+            current_q = self.q_net(replay_data.observations).gather(
+                1, replay_data.actions
+            )
+
+            # Compute Huber loss
+            loss = th.nn.functional.smooth_l1_loss(current_q, target_q)
+
+            # Optimize the Q-network
+            self.policy.optimizer.zero_grad()
+            loss.backward()
+            self.policy.optimizer.step()
+
+        # Update the target network
+        if gradient_step % self.target_update_interval == 0:
+            polyak_update(
+                self.q_net.parameters(), self.q_net_target.parameters(), self.tau
+            )
+
 
 # Define A2C Network
 class ActorCriticNetwork(torch.nn.Module):
@@ -106,14 +160,12 @@ def train_and_evaluate(
         )
         model.save(f"{model_file}.zip")
     elif algorithm == "DDQN":
-        model = DQN(
-            "MlpPolicy", env, verbose=1, double_q=True
-        )  # Enable Double Q-Learning
+        model = CustomDoubleDQN("MlpPolicy", env, verbose=1, learning_starts=500)
         model.learn(total_timesteps=num_episodes * 500)
         rewards, _ = evaluate_policy(
             model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
         )
-        model.save(f"{model_file}.zip")
+        model.save(f"{save_model_path}/{algorithm}_model")
 
     env.close()
     return rewards
