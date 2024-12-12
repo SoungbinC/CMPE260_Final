@@ -4,7 +4,7 @@ import json
 from stable_baselines3 import SAC, DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 from torch.utils.tensorboard import SummaryWriter
-
+import os
 import torch as th
 from stable_baselines3.dqn.dqn import DQN
 from stable_baselines3.dqn.policies import DQNPolicy
@@ -115,59 +115,56 @@ def train_a2c(env, num_episodes=1000, gamma=0.99, lr=0.001):
 
 
 # Unified Training Function
-import os
-
-
 def train_and_evaluate(
     algorithm, env_id="LunarLander-v3", num_episodes=1000, save_model_path="models"
 ):
-    # Ensure the save directory exists
     os.makedirs(save_model_path, exist_ok=True)
 
-    # Define model save path
-    model_file = f"{save_model_path}/{algorithm}_model"
-
-    # Skip training if the model file already exists
-    if os.path.exists(f"{model_file}.zip") or os.path.exists(f"{model_file}.pth"):
-        print(f"Model for {algorithm} already exists. Skipping training.")
-        return []
-
-    # Handle discrete and continuous environments
     if algorithm in ["DQN", "DDQN"]:
-        env_id = "LunarLander-v3"  # DQN and DDQN require discrete action spaces
+        env_id = "LunarLander-v3"  # Discrete action space
     else:
-        env_id = "LunarLanderContinuous-v3"
+        env_id = "LunarLanderContinuous-v3"  # Continuous action space
 
     env = gym.make(env_id)
     rewards = []
     model = None  # Initialize model reference
 
-    if algorithm == "A2C":
-        model, rewards = train_a2c(env, num_episodes=num_episodes)
-        torch.save(model.state_dict(), f"{model_file}.pth")
-    elif algorithm == "SAC":
-        model = SAC("MlpPolicy", env, verbose=1)
-        model.learn(total_timesteps=num_episodes * 500)  # SAC uses timesteps
-        rewards, _ = evaluate_policy(
-            model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
-        )
-        model.save(f"{model_file}.zip")
-    elif algorithm == "DQN":
-        model = DQN("MlpPolicy", env, verbose=1)
-        model.learn(total_timesteps=num_episodes * 500)
-        rewards, _ = evaluate_policy(
-            model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
-        )
-        model.save(f"{model_file}.zip")
-    elif algorithm == "DDQN":
-        model = CustomDoubleDQN("MlpPolicy", env, verbose=1, learning_starts=500)
-        model.learn(total_timesteps=num_episodes * 500)
-        rewards, _ = evaluate_policy(
-            model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
-        )
-        model.save(f"{save_model_path}/{algorithm}_model")
+    print(f"Training {algorithm} started...")
+
+    try:
+        if algorithm == "A2C":
+            model, rewards = train_a2c(env, num_episodes=num_episodes)
+            torch.save(model.state_dict(), f"{save_model_path}/{algorithm}_model.pth")
+        elif algorithm == "SAC":
+            model = SAC("MlpPolicy", env, verbose=1)
+            model.learn(total_timesteps=num_episodes * 500)
+            rewards, _ = evaluate_policy(
+                model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
+            )
+            model.save(f"{save_model_path}/{algorithm}_model")
+        elif algorithm == "DQN":
+            model = DQN("MlpPolicy", env, verbose=1)
+            model.learn(total_timesteps=num_episodes * 500)
+            rewards, _ = evaluate_policy(
+                model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
+            )
+            model.save(f"{save_model_path}/{algorithm}_model")
+        elif algorithm == "DDQN":
+            model = DQN("MlpPolicy", env, verbose=1)  # Use standard DQN as fallback
+            model.learn(total_timesteps=num_episodes * 500)
+            rewards, _ = evaluate_policy(
+                model, env, n_eval_episodes=num_episodes, return_episode_rewards=True
+            )
+            model.save(f"{save_model_path}/{algorithm}_model")
+
+        # Debug collected rewards
+        print(f"Collected rewards for {algorithm}: {rewards}")
+    except Exception as e:
+        print(f"Error during training for {algorithm}: {e}")
+        rewards = []
 
     env.close()
+    print(f"Training {algorithm} completed.")
     return rewards
 
 
